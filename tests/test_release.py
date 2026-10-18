@@ -50,6 +50,38 @@ class ReleaseTests(unittest.TestCase):
         for name, source in BLOCKS.items():
             compile(source, name, "exec")
 
+    def test_short_command_forwards_arguments_and_exit_status(self):
+        bash = os.environ.get("RB_TEST_BASH") or shutil.which("bash")
+        if not bash:
+            self.skipTest("Bash unavailable")
+        wrapper = SOURCE.split('cat > "${STAGING}${SHORT_BIN}" <<\'SH\'\n', 1)[1].split("\nSH\n", 1)[0]
+        # Replace only the destination with a harmless shell probe; execute the
+        # actual wrapper body to catch lost quoting and exit-code propagation.
+        probe = wrapper.replace('exec /usr/local/bin/resource-balancer',
+                                "exec sh -c 'printf \"<%s>\\n\" \"$@\"; exit 37' probe")
+        result = subprocess.run([bash, "-c", probe, "rb", "memory", "a b", "", "--target", "25"],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 37)
+        self.assertEqual(result.stdout, "<memory>\n<a b>\n<>\n<--target>\n<25>\n")
+
+    def test_uninstall_removes_only_owned_short_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            shortcut = Path(directory) / "rb"
+            for owned in (True, False):
+                shortcut.write_bytes(b'#!/bin/sh\nexec /usr/local/bin/resource-balancer "$@"\n'
+                                     if owned else b"unrelated program\n")
+                with self.subTest(owned=owned), \
+                     patch.object(self.cli, "Path", return_value=shortcut), \
+                     patch.object(self.cli, "remove_cpu_quota"), \
+                     patch.object(self.cli, "stop_service"), \
+                     patch.object(self.cli.os, "geteuid", return_value=0, create=True), \
+                     patch.object(self.cli.subprocess, "run") as run, \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    self.cli.uninstall([])
+                commands = [call.args[0] for call in run.call_args_list]
+                self.assertEqual(["rm", "-f", str(shortcut)] in commands, owned)
+                self.assertEqual(commands[-1], ["rm", "-f", "/usr/local/bin/resource-balancer"])
+
     def test_install_preflight_rejects_untrusted_paths(self):
         start = SOURCE.index("import os\nfrom pathlib import Path")
         code = SOURCE[start:SOURCE.index("\nPY", start)]
@@ -435,8 +467,23 @@ flock() { return 0; }
                 self.assertEqual((root / "usr/local/bin/resource-balancer").read_text(), "previous-version\n")
                 self.assertEqual((root / "etc/resource-balancer.conf").read_text(), original_config)
                 self.assertEqual(data.read_bytes(), original_metrics)
+                self.assertFalse((root / "usr/local/bin/rb").exists())
                 if late_failure:
                     self.assertIn("COLLECTOR_RAN", calls, result.stderr)
+
+            # An existing unrelated rb must fail before compilation or stopping
+            # services, and its bytes must remain untouched.
+            shortcut = root / "usr/local/bin/rb"
+            shortcut.write_text("unrelated program\n")
+            log.write_text("")
+            result = subprocess.run([bash, str(script)], capture_output=True, text=True,
+                                    env={**os.environ, "RB_PROBE_LOG": posix_root + "/calls.log",
+                                         "RB_COMPILE_RC": "0", "RB_LATE_FAIL": "0"})
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("already used by another command", result.stderr)
+            self.assertEqual(shortcut.read_text(), "unrelated program\n")
+            self.assertNotIn("COMPILE", log.read_text())
+            self.assertFalse(any(line.startswith("stop ") for line in log.read_text().splitlines()))
 
     def test_installer_preserves_failure_status_and_interactive_shell(self):
         bash = os.environ.get("RB_TEST_BASH") or shutil.which("bash")

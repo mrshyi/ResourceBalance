@@ -59,6 +59,8 @@ resource-balancer status
 
 ## 查看状态和历史
 
+安装当前源码后可用 `rb` 代替 `resource-balancer`，全部子命令和参数保持一致，例如 `rb status`、`rb memory status`、`sudo rb cpu stop`。该入口是系统可执行文件，支持 sudo 和非交互 shell；已发布的 v2.8.3 安装包尚不包含此改动。若 `/usr/local/bin/rb` 已被其他程序占用，安装器会拒绝覆盖；卸载会移除本工具创建的入口。
+
 ```bash
 resource-balancer help
 resource-balancer inspect

@@ -19,6 +19,7 @@ set -euo pipefail
 VERSION="2.8.3"
 
 BIN="/usr/local/bin/resource-balancer"
+SHORT_BIN="/usr/local/bin/rb"
 LIBDIR="/usr/local/lib/resource-balancer"
 COLLECTOR="${LIBDIR}/collector.py"
 MEMTEST="${LIBDIR}/memory.py"
@@ -52,7 +53,7 @@ systemctl show-environment >/dev/null || die "cannot connect to the systemd mana
 
 # Reject symlinks, unexpected types and writable/non-root-owned ancestors before
 # opening root-managed files, including fixed temporary paths used by workers.
-python3 - "$LIBDIR" "$DATADIR" "$BIN" "$CONF" "$MEMCONF" "$CPUCONF" \
+python3 - "$LIBDIR" "$DATADIR" "$BIN" "$SHORT_BIN" "$CONF" "$MEMCONF" "$CPUCONF" \
     "$COLLECTOR_UNIT" "$MEMTEST_UNIT" "$CPUTEST_UNIT" \
     /run/resource-balancer.lock <<'PY'
 import os
@@ -91,7 +92,7 @@ STAGING="$(mktemp -d /tmp/resource-balancer.XXXXXXXX)"
 chmod 700 "$STAGING"
 TRANSACTION_STARTED=0
 INSTALL_COMPLETE=0
-TARGETS=("$CONF" "$COLLECTOR" "$MEMTEST" "$CPUTEST" "$BIN"
+TARGETS=("$CONF" "$COLLECTOR" "$MEMTEST" "$CPUTEST" "$BIN" "$SHORT_BIN"
     "$COLLECTOR_UNIT" "$MEMTEST_UNIT" "$CPUTEST_UNIT")
 SERVICES=(resource-balancer-collector resource-balancer-memory resource-balancer-cpu)
 declare -a WAS_ENABLED WAS_ACTIVE
@@ -2493,6 +2494,7 @@ Resource Balancer v{VERSION}
 Usage:
   resource-balancer [command]
   resource-balancer help [cpu|memory|uninstall]
+  rb [command]  (short name for resource-balancer; same arguments)
 
 Monitoring:
   resource-balancer status
@@ -2646,6 +2648,11 @@ def uninstall(args):
             "/etc/resource-balancer-memory.conf",
         ], check=True)
         subprocess.run(["rm", "-rf", "/var/lib/resource-balancer"], check=True)
+    # Only remove our shortcut; preserve an unrelated command installed later.
+    shortcut = Path("/usr/local/bin/rb")
+    if (not shortcut.is_symlink() and shortcut.is_file()
+            and shortcut.read_bytes() == b'#!/bin/sh\nexec /usr/local/bin/resource-balancer "$@"\n'):
+        subprocess.run(["rm", "-f", str(shortcut)], check=True)
     # Keep the CLI available for retry until all other removals succeed.
     subprocess.run(["rm", "-f", "/usr/local/bin/resource-balancer"], check=True)
     if purge:
@@ -2742,6 +2749,16 @@ if __name__ == "__main__":
 PY
 
 chmod 755 "${STAGING}${BIN}"
+
+# A real executable works in sudo and non-interactive shells without shell aliases.
+cat > "${STAGING}${SHORT_BIN}" <<'SH'
+#!/bin/sh
+exec /usr/local/bin/resource-balancer "$@"
+SH
+chmod 755 "${STAGING}${SHORT_BIN}"
+if [[ -e "$SHORT_BIN" ]] && ! cmp -s "$SHORT_BIN" "${STAGING}${SHORT_BIN}"; then
+    die "$SHORT_BIN is already used by another command; refusing to overwrite it"
+fi
 
 # ============================================================
 # 6. Collector systemd
