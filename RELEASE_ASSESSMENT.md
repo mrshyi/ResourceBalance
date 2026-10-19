@@ -1,8 +1,8 @@
 # 开源发布前评估
 
-更新日期：2026-10-18。对象：`install-resource-balancer.sh`，当前版本 **2.8.3**。
+更新日期：2026-10-19。对象：`install-resource-balancer.sh`；最新发布标签为 **v2.8.3**，`main` 另含尚未发布的 `rb` 命令入口。
 
-**最新结论：已确认的代码发布缺陷已修复；稳定发布仍需 VM 运行验收。** v2.8.3 修复普通卸载和 purge 的 CPU quota 残留，保留管理员配置，清理失败可重试。最新 Linux 基础门禁及 37 项隔离检查通过，不代表已完成真实 systemd/负载/重启/OOM 验收。
+**最新结论：已确认的代码发布缺陷已修复；稳定发布仍需 VM 运行验收。** v2.8.3 修复普通卸载和 purge 的 CPU quota 残留，保留管理员配置，清理失败可重试。当前 `main` 的 Linux Bash/ShellCheck 检查及 39 项隔离测试通过，GitHub Actions 的 Python 3.8/3.12 矩阵通过；这不代表已完成真实 systemd/负载/重启/OOM 验收。
 
 ## v2.8.3 卸载配额修复
 
@@ -31,11 +31,11 @@
 
 ## 本轮验证
 
-- 脚本 SHA-256：`343674926EBD90C72F05D244E1F9B7933FB5872C61D35EF795424AB6E9BC19A5`。
+- v2.8.3 发布标签安装器 SHA-256：`343674926EBD90C72F05D244E1F9B7933FB5872C61D35EF795424AB6E9BC19A5`。`main` 后续加入 `rb` 入口，校验值不同；下载预发布资产时请使用资产附带的 `SHA256SUMS`。
 - Debian WSL：Python 3.13.5、ShellCheck 0.10.0、systemd 257.13-1~deb13u1。
 - `bash -n install-resource-balancer.sh`：通过。
 - 无过滤 `shellcheck install-resource-balancer.sh`：通过。
-- `python3 -m unittest discover -s tests -v`：**37 项全部通过，无跳过**；包括四段内嵌 Python 的 compile 检查、真实 POSIX flock、三个 unit 的 systemd-analyze 静态验证。
+- `python3 -m unittest discover -s tests -v`：当前 `main` 的 **39 项全部通过，无跳过**；包括四段内嵌 Python 的 compile 检查、真实 POSIX flock、三个 unit 的 systemd-analyze 静态验证。
 - Windows Python 3.12.12：37 项检查中 33 项通过，POSIX 锁、systemd-analyze、POSIX 信号及无权限创建符号链接四项按平台跳过；ShellCheck 0.11.0 无过滤检查通过。
 - 独立只读审查发现配置末项与 TERM/HUP 边界，修正后复审未发现新的明确高/中严重度问题。
 - 所有故障场景均使用临时文件和命令桩；信号仅发送给测试子进程。没有安装、启用或启动真实 Resource Balancer 服务，没有产生实际 CPU/内存负载。
@@ -48,7 +48,7 @@ shellcheck install-resource-balancer.sh
 python3 -m unittest discover -s tests -v
 ```
 
-测试位于 `tests/test_release.py`、`tests/test_startup_recovery.py`、`tests/test_quota_cleanup.py`。GitHub Actions 配置在 `.github/workflows/check.yml`，Python 3.8/3.12 矩阵尚未在远端执行；Python 3.8 仍只是源码接口下限，本轮未在该版本实测。
+测试位于 `tests/test_release.py`、`tests/test_startup_recovery.py`、`tests/test_quota_cleanup.py`。GitHub Actions 的 Python 3.8/3.12 矩阵已通过；Python 3.8 是源码接口下限，远端 CI 通过不替代目标发行版上的运行验收。
 
 ## 行为和恢复边界
 
@@ -69,7 +69,7 @@ v2.8.1 的定时解析、NaN/Inf 校验、安装退出码、停止/卸载失败�
 - [x] 修复卸载/purge 的 CPU quota 残留，保留无关配置并覆盖清理失败重试。
 - [x] 修复默认清理旧数据与控制器启动失败后的持久状态恢复。
 - [x] 覆盖重复配置、安装后段失败、部分 quota 写入、中断及恢复失败。
-- [x] Linux Bash、ShellCheck、四段 Python 编译、37 项检查及 unit 静态校验通过。
+- [x] Linux Bash、ShellCheck、四段 Python 编译、39 项检查及 unit 静态校验通过。
 - [x] 同步 README、版本和 MIT 许可证；保留远端 CI 配置。
 - [ ] 在可丢弃 VM 验证全新安装、2.8.0/2.8.1 升级和真实 systemd/D-Bus 失败恢复。
 - [ ] 验证 CPU P95、内存 P95/balance 的实际定时退出、资源释放、永久运行和开机恢复。
@@ -78,6 +78,6 @@ v2.8.1 的定时解析、NaN/Inf 校验、安装退出码、停止/卸载失败�
 - [ ] 实机检查普通卸载、purge，以及 systemd 生成的配额 drop-in 残留。
 - [ ] 测量 CSV 扫描与分钟历史重写的长期 I/O 开销，并明确归档策略。
 - [ ] 完成声明支持的发行版/Python/systemd/cgroup/架构组合运行验收。
-- [ ] 建立 Git 仓库、执行远端 CI，核查来源及历史敏感数据，制作带校验值的发行附件。
+- [x] 建立 GitHub 仓库并执行 Python 3.8/3.12 远端 CI；v2.8.3 预发布资产附 SHA-256 校验文件。
 
-三个服务仍以 root 运行，现有 systemd 沙箱不等于降权。发布仓库为 [mrshyi/ResourceBalance](https://github.com/mrshyi/ResourceBalance)，远端检查结果以 [Actions](https://github.com/mrshyi/ResourceBalance/actions) 为准；上面的本轮验证记录为上传前的本地评估。MIT 版权行为 `Resource Balancer contributors`，未知第三方来源仍需作者确认授权。
+三个服务仍以 root 运行，现有 systemd 沙箱不等于降权。发布仓库为 [mrshyi/ResourceBalance](https://github.com/mrshyi/ResourceBalance)，远端检查结果见 [Actions](https://github.com/mrshyi/ResourceBalance/actions)。MIT 版权行为 `Resource Balancer contributors`，未知第三方来源仍需作者确认授权。
