@@ -1,8 +1,15 @@
 # 开源发布前评估
 
-更新日期：2026-10-19。对象：`install-resource-balancer.sh`；最新发布标签为 **v2.8.3**，`main` 另含尚未发布的 `rb` 命令入口。
+更新日期：2026-10-19。对象：`install-resource-balancer.sh`；待发布版本为 **v2.8.4**。
 
 **最新结论：已确认的代码发布缺陷已修复；稳定发布仍需 VM 运行验收。** v2.8.3 修复普通卸载和 purge 的 CPU quota 残留，保留管理员配置，清理失败可重试。当前 `main` 的 Linux Bash/ShellCheck 检查及 39 项隔离测试通过，GitHub Actions 的 Python 3.8/3.12 矩阵通过；这不代表已完成真实 systemd/负载/重启/OOM 验收。
+
+## v2.8.4 `rb` 命令入口
+
+- 新增 `/usr/local/bin/rb` 可执行入口，原样转发参数和退出码，支持 sudo、脚本及非交互 shell。
+- 安装前检查同名路径；如果已有其他文件占用则拒绝覆盖，并在服务停止前退出。将入口纳入安装暂存、备份和失败回滚。
+- 卸载仅删除内容与项目包装脚本完全一致且不是符号链接的 `rb`，保留其他程序创建的同名文件。
+- 此版本不改变 CPU/内存控制策略。真实主机安装及控制器负载行为仍须单独验证。
 
 ## v2.8.3 卸载配额修复
 
@@ -31,7 +38,7 @@
 
 ## 本轮验证
 
-- v2.8.3 发布标签安装器 SHA-256：`343674926EBD90C72F05D244E1F9B7933FB5872C61D35EF795424AB6E9BC19A5`。`main` 后续加入 `rb` 入口，校验值不同；下载预发布资产时请使用资产附带的 `SHA256SUMS`。
+- v2.8.3 发布标签安装器 SHA-256：`343674926EBD90C72F05D244E1F9B7933FB5872C61D35EF795424AB6E9BC19A5`（历史发布资产）。v2.8.4 发布校验值应以该版本发行附件的 `SHA256SUMS` 为准。
 - Debian WSL：Python 3.13.5、ShellCheck 0.10.0、systemd 257.13-1~deb13u1。
 - `bash -n install-resource-balancer.sh`：通过。
 - 无过滤 `shellcheck install-resource-balancer.sh`：通过。
@@ -78,6 +85,6 @@ v2.8.1 的定时解析、NaN/Inf 校验、安装退出码、停止/卸载失败�
 - [ ] 实机检查普通卸载、purge，以及 systemd 生成的配额 drop-in 残留。
 - [ ] 测量 CSV 扫描与分钟历史重写的长期 I/O 开销，并明确归档策略。
 - [ ] 完成声明支持的发行版/Python/systemd/cgroup/架构组合运行验收。
-- [x] 建立 GitHub 仓库并执行 Python 3.8/3.12 远端 CI；v2.8.3 预发布资产附 SHA-256 校验文件。
+- [x] 建立 GitHub 仓库并执行 Python 3.8/3.12 远端 CI；发行附件提供 SHA-256 校验文件。
 
 三个服务仍以 root 运行，现有 systemd 沙箱不等于降权。发布仓库为 [mrshyi/ResourceBalance](https://github.com/mrshyi/ResourceBalance)，远端检查结果见 [Actions](https://github.com/mrshyi/ResourceBalance/actions)。MIT 版权行为 `Resource Balancer contributors`，未知第三方来源仍需作者确认授权。

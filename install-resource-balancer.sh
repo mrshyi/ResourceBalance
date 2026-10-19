@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Resource Balancer contributors
 #
-# Resource Balancer installer v2.8.3
+# Resource Balancer installer v2.8.4
 #
 # Supported:
 #   - Paste this ENTIRE script directly into an interactive Bash SSH session
@@ -16,7 +16,7 @@
 resource_balancer_installer_main() (
 set -euo pipefail
 
-VERSION="2.8.3"
+VERSION="2.8.4"
 
 BIN="/usr/local/bin/resource-balancer"
 SHORT_BIN="/usr/local/bin/rb"
@@ -169,7 +169,7 @@ echo
 # 1. Baseline preflight / preserve runtime state
 # ============================================================
 
-echo "[1/10] Preparing v2.8.3 installation/reinstall..."
+echo "[1/10] Preparing v2.8.4 installation/reinstall..."
 
 # v2.8.0 is the clean baseline. Supported paths are intentionally limited to:
 #   1) fresh installation
@@ -1321,7 +1321,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
-VERSION = "2.8.3"
+VERSION = "2.8.4"
 
 DATA = "/var/lib/resource-balancer/metrics.csv"
 STATE = "/var/lib/resource-balancer/memory-managed-kb"

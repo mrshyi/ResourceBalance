@@ -1,6 +1,6 @@
 # Resource Balancer
 
-Linux 主机资源监控与可选 CPU / 内存合成负载控制工具。当前安装脚本版本为 **2.8.3**，使用 Bash、Python 标准库和 systemd，无需 pip 依赖。
+Linux 主机资源监控与可选 CPU / 内存合成负载控制工具。当前安装脚本版本为 **2.8.4**，使用 Bash、Python 标准库和 systemd，无需 pip 依赖。
 
 > 发布状态：已修复默认清理历史数据、启动失败状态恢复和卸载配额残留等已确认问题，并采用 MIT 许可证；真实负载、重启恢复和 OOM 场景仍需在可丢弃 VM 验收。完整验证范围见 [发布评估](RELEASE_ASSESSMENT.md)。
 
@@ -31,13 +31,13 @@ P95 模式补充负载时，瞬时目标为 `min(80%, 目标 + 5 个百分点)`�
 
 ## 安装
 
-项目地址：[mrshyi/ResourceBalance](https://github.com/mrshyi/ResourceBalance)。在具有 `curl` 的测试 Linux 主机运行下面一行，下载完整的 v2.8.3 脚本、校验 SHA-256 后安装（普通用户会提示 sudo 密码）：
+项目地址：[mrshyi/ResourceBalance](https://github.com/mrshyi/ResourceBalance)。在具有 `curl` 的测试 Linux 主机运行下面一行，下载完整的 v2.8.4 脚本、校验 SHA-256 后安装（普通用户会提示 sudo 密码）：
 
 ```bash
-(set -e; f=$(mktemp); trap 'rm -f "$f"' EXIT; curl -fsSL https://raw.githubusercontent.com/mrshyi/ResourceBalance/v2.8.3/install-resource-balancer.sh -o "$f"; printf '%s  %s\n' 343674926ebd90c72f05d244e1f9b7933fb5872c61d35ef795424ab6e9bc19a5 "$f" | sha256sum -c -; bash "$f")
+(set -e; f=$(mktemp); trap 'rm -f "$f"' EXIT; curl -fsSL https://raw.githubusercontent.com/mrshyi/ResourceBalance/v2.8.4/install-resource-balancer.sh -o "$f"; printf '%s  %s\n' b6962f3b6a873d2215e4e13f428ba614fb9253963fd6baedc060c2851b535927 "$f" | sha256sum -c -; bash "$f")
 ```
 
-此版本为预发布候选；安装默认仅启动采集器，CPU/内存合成负载需要另行显式启动。安装前建议先审阅脚本；远端自动检查见 [GitHub Actions](https://github.com/mrshyi/ResourceBalance/actions)。
+v2.8.4 为预发布候选，新增 `rb` 命令入口，其他功能和 `resource-balancer` 完全相同。安装默认仅启动采集器，CPU/内存合成负载需要另行显式启动。安装前建议先审阅脚本；远端自动检查见 [GitHub Actions](https://github.com/mrshyi/ResourceBalance/actions)。
 
 先下载并审阅本目录的 `install-resource-balancer.sh`，确认来源和完整性，然后在测试 Linux 主机执行：
 
@@ -59,7 +59,7 @@ resource-balancer status
 
 ## 查看状态和历史
 
-安装当前源码后可用 `rb` 代替 `resource-balancer`，全部子命令和参数保持一致，例如 `rb status`、`rb memory status`、`sudo rb cpu stop`。该入口是系统可执行文件，支持 sudo 和非交互 shell；已发布的 v2.8.3 安装包尚不包含此改动。若 `/usr/local/bin/rb` 已被其他程序占用，安装器会拒绝覆盖；卸载会移除本工具创建的入口。
+v2.8.4 起可用 `rb` 代替 `resource-balancer`，全部子命令和参数保持一致，例如 `rb status`、`rb memory status`、`sudo rb cpu stop`。该入口是系统可执行文件，支持 sudo 和非交互 shell。若 `/usr/local/bin/rb` 已被其他程序占用，安装器会拒绝覆盖；卸载会移除本工具创建的入口。
 
 ```bash
 resource-balancer help
